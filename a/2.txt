@@ -1,0 +1,88 @@
+**Importing
+import numpy as np
+import random
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import layers,Model
+
+**Data Generator Function
+def data_generator(num_of_data):
+  X=np.random.randint(-20,20,size=num_of_data,dtype=int)
+  Y=5*X**3-68*X**2-7*X+1
+  return X,Y
+
+**Model
+def DNN_Model():
+    inputs=layers.Input(shape=(1,))
+    x=layers.Dense(32,activation='relu')(inputs)
+    x=layers.Dense(64,activation='relu')(x)
+    x=layers.Dense(128,activation='relu')(x)
+
+    outputs=layers.Dense(1,activation='tanh')(x)
+
+    model=Model(inputs,outputs)
+
+    return model
+
+
+**Summary
+model=DNN_Model()
+model.summary()
+
+**Normalizing data from -1 to + 1
+
+data_x,data_y=data_generator(5000)
+x_min = np.min(data_x)
+x_max = np.max(data_x)
+y_min = np.min(data_y)
+y_max = np.max(data_y)
+
+data_x=2*((data_x-x_min)/(x_max-x_min))-1
+data_y=2*((data_y-y_min)/(y_max-y_min))-1
+
+train_x=data_x[:int(len(data_x)*.9)]
+train_y=data_y[:int(len(data_y)*.9)]
+
+val_x=data_x[int(len(data_x)*.9):int(len(data_x)*.95)]
+val_y=data_y[int(len(data_y)*.9):int(len(data_y)*.95)]
+
+test_x=data_x[int(len(data_x)*.95):]
+test_y=data_y[int(len(data_y)*.95):]
+
+**Compile
+model=DNN_Model()
+model.compile(optimizer=Adam(learning_rate=0.0001),loss="mean_squared_error",metrics=[tf.keras.metrics.R2Score()])
+history=model.fit(train_x,train_y,epochs=20,validation_data=(val_x,val_y))
+
+**Predicted Result on test data
+pred_y=model.predict(test_x)
+
+**Denormalizing the Test data and PredictedOutput
+test_x1=((test_x+1)*(x_max-x_min)/2)+x_min
+test_y1=((test_y+1)*(y_max-y_min)/2)+y_min
+pred_y1=((pred_y+1)*(y_max-y_min)/2)+y_min
+
+**plotting
+performance_dict = history.history
+plt.figure(figsize = (18, 10))
+plt.subplot(2,2,1)
+plt.plot(performance_dict['loss'])
+plt.plot(performance_dict['val_loss'])
+plt.legend(['train_loss', 'validation_loss'])
+
+plt.subplot(2,2,2)
+plt.plot(performance_dict['r2_score'])
+plt.plot(performance_dict['val_r2_score'])
+plt.legend(['train_accuracy', 'validation_accuracy'])
+
+plt.subplot(2,2,3)
+plt.scatter(test_x1, test_y1)
+plt.legend(['Actual Value'])
+
+plt.subplot(2,2,4)
+plt.scatter(test_x1, test_y1)
+plt.scatter(test_x1, pred_y1)
+plt.legend(['Actual Value', 'Predicted Value'])
+
+plt.show()

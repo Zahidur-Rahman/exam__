@@ -1,0 +1,148 @@
+**Importing libraris
+import cv2
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+import matplotlib.pyplot as plt
+from tensorflow.keras import layers, Model
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+**Creating Model
+def create_Model():
+    inputs=layers.Input((28 , 28 , 3))
+    x=layers.Conv2D(filters=32 , kernel_size=(3,3))(inputs)
+    x=layers.Activation('relu')(x)
+    x=layers.MaxPooling2D(pool_size=(3,3) , strides=(1,1) , padding='valid')(x)
+
+
+    x=layers.Conv2D(filters=64 , kernel_size=(3,3))(x)
+    x=layers.Activation('relu')(x)
+    x=layers.MaxPooling2D(pool_size=(3,3), strides=(1,1))(x)
+
+    x=layers.Flatten()(x)
+    x=layers.Dense(64)(x)
+    outputs=layers.Dense(10,activation='softmax')(x)
+
+    model=Model(inputs,outputs)
+
+    return model
+**Mnist+Augmentation
+(traX,traY),(tstX,tstY)= mnist.load_data()
+n=30000
+m=2000
+b=1
+trainX = traX.astype('float32') / 255.0
+testX = tstX.astype('float32') / 255.0
+trainX=np.stack([cv2.cvtColor(traX[i],cv2.COLOR_GRAY2RGB) for i in range(n)])
+testX=np.stack([cv2.cvtColor(tstX[i],cv2.COLOR_GRAY2RGB) for i in range(m)])
+print(trainX.shape)
+#one hot encoding
+trainY=to_categorical(traY[:n],num_classes=10)
+testY=to_categorical(tstY[:m],num_classes=10)
+
+#print(trainX.shape)
+augDataGen=ImageDataGenerator(rotation_range = 12,
+    height_shift_range = 0.18,
+    width_shift_range = 0.12,
+    shear_range = 4.1,
+    zoom_range = 0.20)
+aug_train_data_frame = augDataGen.flow(trainX, trainY, batch_size=b, shuffle=True)
+aug_test_data_frame = augDataGen.flow(testX, testY, batch_size=b, shuffle=True)
+
+#convert augmented data into list
+
+aug_trainX=[]
+aug_trainY=[]
+aug_testX =[]
+aug_testY=[]
+
+
+
+num_augmented_train_samples = n
+num_augmented_test_samples = m
+
+for i in range(num_augmented_train_samples//b):
+  aug_images,aug_labels=next(aug_train_data_frame)
+  aug_trainX.extend(aug_images)
+  aug_trainY.extend(aug_labels)
+
+for i in range(num_augmented_test_samples//b):
+  aug_images,aug_labels=next(aug_test_data_frame)
+  aug_testX.extend(aug_images)
+  aug_testY.extend(aug_labels)
+
+
+aug_trainX=np.array(aug_trainX)
+aug_trainY=np.array(aug_trainY)
+
+aug_testX=np.array(aug_testX)
+aug_testY=np.array(aug_testY)
+
+
+X_combined=np.concatenate((aug_trainX,trainX))
+Y_combined=np.concatenate((aug_trainY,trainY))
+
+
+**Optimization
+opt=Adam(learning_rate=0.0001)
+my_callback = [keras.callbacks.EarlyStopping(monitor='val_loss' ,patience=5)]
+model_1.compile(optimizer=opt,loss='categorical_crossentropy',metrics=['accuracy'])
+
+
+opt=Adam(learning_rate=0.0001)
+my_callback = [keras.callbacks.EarlyStopping(monitor='val_loss' ,patience=7)]
+model_2.compile(optimizer=opt,loss='categorical_crossentropy',metrics=['accuracy'])
+
+**Plotting
+def plot_history(history):
+    plt.figure(figsize=(12,4))
+    plt.subplot(1,2,1)
+    plt.plot(history.history['accuracy'],label='Traning_Accuracy')
+    plt.plot(history.history['val_accuracy'],label='Validation_Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.title('Accuracy over epochs')
+
+# Loss plot
+   
+    plt.subplot(1,2,2)
+    plt.plot(history.history['loss'],label='Traning_loss')
+    plt.plot(history.history['val_loss'],label='Validation_loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Loss over epochs')
+
+    plt.tight_layout
+    plt.show()
+   
+
+**Training with Original Data
+history = model_1.fit(trainX, trainY, validation_split=0.2, batch_size=4, shuffle=True, epochs=50, callbacks=my_callback)
+plot_history(history)
+
+**Training with Augmented Data
+history = model_2.fit(x_combined, y_combined, validation_split=0.2, batch_size=4, shuffle=True, epochs=50, callbacks=my_callback)
+plot_history(history
+
+
+**Comparing Results
+result_1 = model_1.evaluate(testX, testY)
+result_2 = model_1.evaluate(aug_testX, aug_testY)
+result_3 = model_2.evaluate(testX, testY)
+result_4 = model_2.evaluate(aug_testX, aug_testY)
+opt=Adam(learning_rate=0.0001)
+my_callback = [keras.callbacks.EarlyStopping(monitor='val_loss' ,patience=7)]
+model_2.compile(optimizer=opt,loss='categorical_crossentropy',metrics=['accuracy'])
+
+
+**Printing the comparison
+
+print("Training with original train data and Testing with original test data: accuracy = {}, loss = {}".format(result_1[1], result_1[0]))
+print("Training with original train data and Testing with augmented test data: accuracy = {}, loss = {}".format(result_2[1], result_2[0]))
+print("Training with original + augmented train data and Testing with original test data: accuracy = {}, loss = {}".format(result_3[1], result_3[0]))
+print("Training with original + augmented train data and Testing with augmented test data: accuracy = {}, loss = {}".format(result_4[1], result_4[0]))
