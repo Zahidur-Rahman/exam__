@@ -1,0 +1,90 @@
+***import
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.applications.vgg16 import VGG16, preprocess_input
+from tensorflow.keras import layers, Model
+from tensorflow.keras.datasets import mnist
+
+***
+
+def build_vgg16():
+  inputs = layers.Input((224, 224, 3))
+
+  # 1st block
+  x = layers.Conv2D(filters=64, kernel_size=(3,3), padding='same', activation='relu')(inputs)
+  x = layers.Conv2D(filters=64, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.MaxPooling2D(pool_size=(2,2))(x)
+
+  # 2nd block
+  x = layers.Conv2D(filters=128, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.Conv2D(filters=128, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.MaxPooling2D(pool_size=(2,2))(x)
+
+  # 3rd block
+  x = layers.Conv2D(filters=256, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.Conv2D(filters=256, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.Conv2D(filters=256, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.MaxPooling2D(pool_size=(2,2))(x)
+
+  # 4th block
+  x = layers.Conv2D(filters=512, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.Conv2D(filters=512, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.Conv2D(filters=512, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.MaxPooling2D(pool_size=(2,2))(x)
+
+  # 5th block
+  x = layers.Conv2D(filters=512, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.Conv2D(filters=512, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.Conv2D(filters=512, kernel_size=(3,3), padding='same', activation='relu')(x)
+  x = layers.MaxPooling2D(pool_size=(2,2))(x)
+
+  # FCNN
+  x = layers.Flatten()(x)
+  x = layers.Dense(4096, activation='relu')(x)
+  x = layers.Dense(4096, activation='relu')(x)
+
+  outputs = layers.Dense(1000, activation='softmax')(x)
+
+  model = Model(inputs, outputs)
+
+  return model
+
+
+
+***
+
+org_vgg_model = VGG16()
+custom_vgg_model = build_vgg16()
+org_vgg_model.summary()
+custom_vgg_model.summary()
+
+
+***
+
+original_model = VGG16()
+our_vgg16 = build_vgg16()
+
+for i in range(len(original_model.layers)):
+  our_vgg16.layers[i].set_weights(original_model.layers[i].get_weights())
+
+***
+
+inputs = our_vgg16.inputs
+x = our_vgg16.layers[-5].output
+x = layers.Flatten()(x)
+x = layers.Dense(64, activation='relu')(x)
+x = layers.Dense(64, activation='relu')(x)
+outputs = layers.Dense(10, activation='softmax')(x)
+
+model = Model(inputs, outputs, name="new vgg16")
+
+model.summary()
+
+***
+
+for layer in model.layers[:-5]:
+  layer.trainable = False
+for layer in model.layers[-5:]:
+  layer.trainable = True
+
+model.summary()
